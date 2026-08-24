@@ -22,3 +22,9 @@ wcp-0100,1
 Because the app creates a new context with file upload, you need to deploy the application for a persistent lifetime. Running the app locally in your python development environment will not work.
 
 Use the **Import Order CSV**  shortcut in the #purchasing channel Slack and select the `.csv` file of interest. The app appends the product title, quantity, clickable product link, and price in dollars to the configured Google sheet.
+
+## TODO:
+* Support ordering CSVs from REV, CTRE, Andymark, etc
+* Multi CSV import?
+* Associate orders to parts. Link parts in the PO sheet back to FRCBom? The idea here is to get a better idea of what a part costs
+* Send a daily/weekly/whatever digest email to purchasing approvers? Apps script triggered email or Slack DM would work
