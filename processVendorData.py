@@ -2,14 +2,12 @@ import requests
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote
 
-
-def get_shopify_product(store_url, handle):
-    #Get public Shopify product information using the product handle. For WCP, this is the SKU (E.g. "wcp-0063").
-    #Returns: dict containing all of the Shopify product information
-
+#Get public Shopify product information using the product handle. For WCP, this is the SKU (E.g. "wcp-0063").
+#Returns: dict containing all of the Shopify product information
+def get_shopify_product(handle):
 
     store_url = store_url.rstrip("/")
-    url = f"{store_url}/products/{handle}.js"
+    url = f"https://wcproducts.com/products/{handle}.js"
 
     response = requests.get(
         url,
@@ -23,24 +21,32 @@ def get_shopify_product(store_url, handle):
     
     return response.json()
 
+def get_andymark_product(): #Andymark is also shopify, so this might have the same workflow as WCP
+    return -1
+
+def get_ctre_product():
+    return -1
+
+def get_rev_product():
+    return -1
+
+#Convert cents to a dollar string formatted as X.XX.
 def cents_to_dollars(cents):
-    #Convert cents to a dollar string formatted as X.XX.
     try:
         dollars = Decimal(cents) / Decimal(100)
         return f"{dollars:,.2f}"
     except (InvalidOperation, ValueError):
         return f"{cents}" if cents else "0.00"
 
-def filter_shopify_product(product, quantity, store_url):
-    """
-    Return the product fields needed by the Slack CSV workflow.
+# Returns product fields needed by the Slack CSV workflow for Shopify store products
+def filter_shopify_info(product, quantity, store_url):
 
-    Returns:
-        dict containing the title, quantity, human-readable link, and price.
-    """
     handle = product.get("handle", "")
     variants = product.get("variants") or []
+
+    #Shopify prices are in cents
     price = cents_to_dollars(product.get("price"))
+
     if price is None and variants:
         price = cents_to_dollars(variants[0].get("price"))
 

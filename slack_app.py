@@ -11,13 +11,15 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
 from slack_sdk.http_retry.builtin_handlers import ConnectionErrorRetryHandler
 from slack_sdk.web import WebClient
+from processVendorData import *
 
-from importWCPData import filter_shopify_product, get_shopify_product
 
+WCP_URL = "https://wcproducts.com"
+AM_URL = "https://Andymark.com"
 
 STORE_URL = os.environ["SHOPIFY_STORE_URL"]
 
-#Fetch and format Shopify products from a two-column CSV. Currenty works for WCP only
+#Fetch and format products from a two-column CSV. Currenty works for WCP only
 def products_from_csv(csv_text):
     rows = list(csv.reader(io.StringIO(csv_text)))
     if not rows:
@@ -45,8 +47,24 @@ def products_from_csv(csv_text):
         if quantity < 1:
             raise ValueError(f"Row {row_number} quantity must be at least 1.")
 
-        product = get_shopify_product(STORE_URL, handle)
-        results.append(filter_shopify_product(product, quantity, STORE_URL))
+        #Pull product information from vendors
+        if handle.startswith("wcp"):
+            product = get_shopify_product(handle)
+            results.append(filter_shopify_info(product, quantity, WCP_URL))
+
+        elif handle.startswith("am"):
+            product = get_andymark_product(handle)
+
+        elif handle.startswith("rev"):
+            product = get_rev_product(handle)
+
+        elif handle.startswith("ctre"):
+            product = get_ctre_product(handle)
+
+        else:
+            raise ValueError(f"SKU {handle} is not a valid part for any vendor")
+        
+        
 
     if not results:
         raise ValueError("The CSV contains no product rows.")

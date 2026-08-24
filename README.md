@@ -8,6 +8,9 @@ SKU,QTY
 wcp-0063,2
 wcp-0100,1
 ```
+## Using the App
+1. In the #purchasing channel, type / or use the 'Run Shortcuts' menu and launch "Import FRCBom CSV"
+2. 
 
 ## Deploy to Vercel
 
@@ -25,6 +28,10 @@ Use the **Import Order CSV**  shortcut in the #purchasing channel Slack and sele
 
 ## TODO:
 * Support ordering CSVs from REV, CTRE, Andymark, etc
+* Link WCP product pages instead of the placeholder shopify listings
 * Multi CSV import?
 * Associate orders to parts. Link parts in the PO sheet back to FRCBom? The idea here is to get a better idea of what a part costs
 * Send a daily/weekly/whatever digest email to purchasing approvers? Apps script triggered email or Slack DM would work
+
+## Other Slack App Ideas:
+* move programming Slack List statuses around by linking to Github issues
