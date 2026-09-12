@@ -2,15 +2,19 @@
 
 This Slack app provides allows users to upload CSVs generated from FRCBOM into the PO Spreadsheet. This keeps all purchases tracked in one place, while allowing us to use quick-ordering features and easily move data between systems
 
+Below is a sample WCP spreadsheet from FRCBOM
 
 ```csv
 SKU,QTY
 wcp-0063,2
 wcp-0100,1
 ```
+
 ## Using the App
-1. In the #purchasing channel, type / or use the 'Run Shortcuts' menu and launch "Import FRCBom CSV"
-2. 
+1. Download the vendor CSV from FRCBom
+2. In the #purchasing channel, type / or use the 'Run Shortcuts' menu and launch **Import FRCBom CSV**
+3. Upload the CSV and select a needed by date. 
+4. Confirm that the app sent a message to the #purchasing channel and that the PO spreadsheet has been updated
 
 ## Deploy to Vercel
 
@@ -19,19 +23,17 @@ wcp-0100,1
 3. Install dependencies with `python -m pip install -r requirements.txt`.
 4. Deploy the repository with Vercel. Vercel automatically uses [api/index.py](api/index.py) as the Python function entrypoint.
 5. In Slack, set the Interactivity Request URL to `https://YOUR-VERCEL-DOMAIN/api/index`.
-6. Add `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SHOPIFY_STORE_URL`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_SHEET_ID`, and `GOOGLE_WORKSHEET_NAME` as Vercel environment variables. The 
+6. Add `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_SHEET_ID`, and `GOOGLE_WORKSHEET_NAME` as Vercel environment variables. The 
 7. Share the Google Sheet with the service account email from `GOOGLE_SERVICE_ACCOUNT_JSON` as an Editor.
 
 Because the app creates a new context with file upload, you need to deploy the application for a persistent lifetime. Running the app locally in your python development environment will not work.
 
-Use the **Import Order CSV**  shortcut in the #purchasing channel Slack and select the `.csv` file of interest. The app appends the product title, quantity, clickable product link, and price in dollars to the configured Google sheet.
 
 ## TODO:
 * Support ordering CSVs from REV, CTRE, Andymark, etc
-* Link WCP product pages instead of the placeholder shopify listings
-* Multi CSV import?
+* Multiple CSV import?
 * Associate orders to parts. Link parts in the PO sheet back to FRCBom? The idea here is to get a better idea of what a part costs
 * Send a daily/weekly/whatever digest email to purchasing approvers? Apps script triggered email or Slack DM would work
 
 ## Other Slack App Ideas:
-* move programming Slack List statuses around by linking to Github issues
+* Move programming Slack List statuses around by linking to Github issues

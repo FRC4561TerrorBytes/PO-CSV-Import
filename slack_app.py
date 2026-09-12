@@ -6,6 +6,7 @@ import os
 
 import gspread
 import requests
+
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
@@ -16,8 +17,8 @@ from processVendorData import *
 
 WCP_URL = "https://wcproducts.com"
 AM_URL = "https://Andymark.com"
-
-STORE_URL = os.environ["SHOPIFY_STORE_URL"]
+CTRE_URL = "https://www.ctre-phoenix.com"
+REV_URL = "https://www.revrobotics.com"
 
 #Fetch and format products from a two-column CSV. Currenty works for WCP only
 def products_from_csv(csv_text):
@@ -49,7 +50,7 @@ def products_from_csv(csv_text):
 
         #Pull product information from vendors
         if handle.startswith("wcp"):
-            product = get_shopify_product(handle)
+            product = get_shopify_product(handle, WCP_URL)
             results.append(filter_shopify_info(product, quantity, WCP_URL))
 
         elif handle.startswith("am"):
@@ -57,14 +58,18 @@ def products_from_csv(csv_text):
 
         elif handle.startswith("rev"):
             product = get_rev_product(handle)
+            results.append(filter_shopify_info({
+                "handle": product["handle"],
+                "title": product["title"],
+                "price": product["price"],
+                "variants": product.get("variants", []),
+            }, quantity, REV_URL))
 
         elif handle.startswith("ctre"):
             product = get_ctre_product(handle)
 
         else:
             raise ValueError(f"SKU {handle} is not a valid part for any vendor")
-        
-        
 
     if not results:
         raise ValueError("The CSV contains no product rows.")
