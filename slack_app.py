@@ -31,6 +31,7 @@ def products_from_csv(csv_text):
         rows = rows[1:]
 
     results = []
+    ctre_catalog = None
     for row_number, row in enumerate(rows, start=1):
         if not row or not any(cell.strip() for cell in row):
             continue
@@ -54,19 +55,29 @@ def products_from_csv(csv_text):
             results.append(filter_shopify_info(product, quantity, WCP_URL))
 
         elif handle.startswith("am"):
-            product = get_andymark_product(handle)
+            if am_catalog is None:
+                am_catalog = get_shopify_catalog(AM_URL, AM_URL)
+
+            resolved_handle = get_handle_for_sku(am_catalog, handle)
+            if resolved_handle is None:
+                raise ValueError(f"SKU {handle} is not a valid part for Andymark")
+
+            product = get_shopify_product(resolved_handle, AM_ROOT)
+            results.append(filter_shopify_info(product, quantity, AM_ROOT))
 
         elif handle.startswith("rev"):
-            product = get_rev_product(handle)
-            results.append(filter_shopify_info({
-                "handle": product["handle"],
-                "title": product["title"],
-                "price": product["price"],
-                "variants": product.get("variants", []),
-            }, quantity, REV_URL))
+            raise ValueError(f"REV Robotics parts are not supported")
 
         elif handle.startswith("ctre"):
-            product = get_ctre_product(handle)
+            if ctre_catalog is None:
+                ctre_catalog = get_shopify_catalog(CTRE_URL, CTRE_ROOT)
+
+            resolved_handle = get_handle_for_sku(ctre_catalog, handle)
+            if resolved_handle is None:
+                raise ValueError(f"SKU {handle} is not a valid part for CTR Electronics")
+
+            product = get_shopify_product(resolved_handle, CTRE_ROOT)
+            results.append(filter_shopify_info(product, quantity, CTRE_ROOT))
 
         else:
             raise ValueError(f"SKU {handle} is not a valid part for any vendor")

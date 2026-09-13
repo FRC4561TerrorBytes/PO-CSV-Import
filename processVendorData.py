@@ -1,3 +1,4 @@
+import json
 import re
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote
@@ -6,6 +7,60 @@ import requests
 
 
 REV_URL = "https://www.revrobotics.com"
+AM_URL = "https://andymark.com/collections/view-all/products"
+AM_ROOT = "https://andymark.com"
+CTRE_URL = "https://store.ctr-electronics.com/collections/all-products/products"
+CTRE_ROOT = "https://store.ctr-electronics.com/"
+
+def get_shopify_catalog(url, rootUrl):
+    handle_catalog = {}
+
+    page = 1
+    page_size = 250
+
+    while True:
+        params = {"limit": page_size, "page": page}
+        response = requests.get(url +".json", params=params, timeout=20)
+        response.raise_for_status()
+        payload = response.json()
+
+        products = payload.get("products") or []
+        if not products:
+            break
+
+        for product in products:
+            product_handle = (product.get("handle") or "").strip()
+            if not product_handle:
+                continue
+
+            variants = []
+            for variant in product.get("variants") or []:
+                variants.append({
+                    "id": variant.get("id"),
+                    "sku": (variant.get("sku") or "").strip(),
+                    "title": (variant.get("title") or "").strip(),
+                    "price": variant.get("price"),
+                    "available": variant.get("available"),
+                })
+
+            handle_catalog[product_handle] = {
+                "handle": product_handle,
+                "title": (product.get("title") or "").strip(),
+                "product_id": product.get("id"),
+                "vendor": product.get("vendor"),
+                "available": product.get("available"),
+                "product_url": f"{rootUrl}/products/{product_handle}",
+                "variants": variants,
+                "sku": variants[0].get("sku") if variants else None,
+                "price": variants[0].get("price") if variants else None,
+            }
+
+        if len(products) < page_size:
+            break
+
+        page += 1
+
+    return handle_catalog
 
 
 #Get public Shopify product information using the product handle. For WCP, this is the SKU (E.g. "wcp-0063").
@@ -25,6 +80,21 @@ def get_shopify_product(handle, url):
     response.raise_for_status()
 
     return response.json()
+
+
+def get_handle_for_sku(catalog, sku):
+    if not catalog or not sku:
+        return None
+
+    normalized_sku = sku.strip().upper()
+
+    for handle, product in catalog.items():
+        variants = product.get("variants") or []
+        for variant in variants:
+            if (variant.get("sku") or "").strip().upper() == normalized_sku:
+                return handle
+
+    return None
 
 
 def get_andymark_product(handle): #Andymark is also shopify, so this might have the same workflow as WCP
@@ -56,106 +126,6 @@ def normalize_price_to_cents(price):
         return int(cents)
     except (InvalidOperation, ValueError, TypeError):
         return 0
-
-
-def parse_rev_product_payload(payload, handle):
-    product = (payload or {}).get("data", {}).get("site", {}).get("product")
-    if not product:
-        raise ValueError(f"REV SKU {handle} was not found on Revrobotics.com")
-
-    variants = product.get("variants", {}).get("edges") or []
-    variant = None
-    normalized_handle = (handle or "").upper()
-    for edge in variants:
-        node = edge.get("node") or {}
-        if (node.get("sku") or "").upper() == normalized_handle:
-            variant = node
-            break
-
-    if variant is None and variants:
-        variant = variants[0].get("node") or {}
-
-    title = (product.get("name") or variant.get("name") or handle or "").strip()
-    price_value = None
-    if variant:
-        price_value = (variant.get("prices") or {}).get("price", {}).get("value")
-    if price_value is None:
-        price_value = product.get("price")
-    price = normalize_price_to_cents(price_value)
-
-    normalized_variant = dict(variant or {})
-    normalized_variant["price"] = price
-    normalized_variant["handle"] = handle
-
-    product_dict = {
-        "handle": handle,
-        "title": title,
-        "price": price,
-        "variants": [normalized_variant],
-    }
-    if product.get("sku"):
-        product_dict["sku"] = product.get("sku")
-    return product_dict
-
-
-def get_rev_storefront_token(store_url):
-    response = requests.get(store_url, timeout=20)
-    response.raise_for_status()
-    match = re.search(r'const\s+STOREFRONT_TOKEN\s*=\s*"([^"]+)"', response.text)
-    if not match:
-        raise ValueError("Could not find the Rev storefront token on the public storefront page.")
-    return match.group(1)
-
-
-def get_rev_product(handle):
-    if not handle:
-        raise ValueError("REV product handle is required.")
-
-    handle = str(handle).strip()
-    store_url = REV_URL.rstrip("/")
-    token = get_rev_storefront_token(store_url)
-    query = """
-        query ProductBySku($sku: String!) {
-          site {
-            product(variantSku: $sku) {
-              entityId
-              name
-              sku
-              variants(first: 50) {
-                edges {
-                  node {
-                    entityId
-                    sku
-                    name
-                    prices {
-                      price {
-                        value
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-    """
-
-    response = requests.post(
-        f"{store_url}/graphql",
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
-        },
-        json={
-            "query": query,
-            "variables": {"sku": handle.upper()},
-        },
-        timeout=20,
-    )
-    response.raise_for_status()
-    payload = response.json()
-    return parse_rev_product_payload(payload, handle)
-
 
 #Convert cents to a dollar string formatted as X.XX.
 def cents_to_dollars(cents):
