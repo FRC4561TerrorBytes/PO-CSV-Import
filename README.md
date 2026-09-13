@@ -10,6 +10,14 @@ wcp-0063,2
 wcp-0100,1
 ```
 
+## Supported Vendors
+* West Coast Products (WCP)
+* Andymark
+* CTR Electronics
+
+Unsupported as of now:
+* REV
+
 ## Using the App
 1. Download the vendor CSV from FRCBom
 2. In the #purchasing channel, type / or use the 'Run Shortcuts' menu and launch **Import FRCBom CSV**
@@ -30,7 +38,7 @@ Because the app creates a new context with file upload, you need to deploy the a
 
 
 ## TODO:
-* Support ordering CSVs from REV, CTRE, Andymark, etc
+* Support ordering CSVs from REV and other vendors?
 * Multiple CSV import?
 * Associate orders to parts. Link parts in the PO sheet back to FRCBom? The idea here is to get a better idea of what a part costs
 * Send a daily/weekly/whatever digest email to purchasing approvers? Apps script triggered email or Slack DM would work
