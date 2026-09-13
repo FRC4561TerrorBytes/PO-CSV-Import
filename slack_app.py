@@ -6,18 +6,21 @@ import os
 
 import gspread
 import requests
+
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk.errors import SlackApiError
 from slack_sdk.http_retry.builtin_handlers import ConnectionErrorRetryHandler
 from slack_sdk.web import WebClient
+from processVendorData import *
 
-from importWCPData import filter_shopify_product, get_shopify_product
 
+WCP_URL = "https://wcproducts.com"
+AM_URL = "https://Andymark.com"
+CTRE_URL = "https://www.ctre-phoenix.com"
+REV_URL = "https://www.revrobotics.com"
 
-STORE_URL = os.environ["SHOPIFY_STORE_URL"]
-
-#Fetch and format Shopify products from a two-column CSV. Currenty works for WCP only
+#Fetch and format products from a two-column CSV. Currenty works for WCP only
 def products_from_csv(csv_text):
     rows = list(csv.reader(io.StringIO(csv_text)))
     if not rows:
@@ -28,6 +31,7 @@ def products_from_csv(csv_text):
         rows = rows[1:]
 
     results = []
+    ctre_catalog = None
     for row_number, row in enumerate(rows, start=1):
         if not row or not any(cell.strip() for cell in row):
             continue
@@ -45,8 +49,38 @@ def products_from_csv(csv_text):
         if quantity < 1:
             raise ValueError(f"Row {row_number} quantity must be at least 1.")
 
-        product = get_shopify_product(STORE_URL, handle)
-        results.append(filter_shopify_product(product, quantity, STORE_URL))
+        #Pull product information from vendors
+        if handle.startswith("wcp"):
+            product = get_shopify_product(handle, WCP_URL)
+            results.append(filter_shopify_info(product, quantity, WCP_URL))
+
+        elif handle.startswith("am"):
+            if am_catalog is None:
+                am_catalog = get_shopify_catalog(AM_URL, AM_URL)
+
+            resolved_handle = get_handle_for_sku(am_catalog, handle)
+            if resolved_handle is None:
+                raise ValueError(f"SKU {handle} is not a valid part for Andymark")
+
+            product = get_shopify_product(resolved_handle, AM_ROOT)
+            results.append(filter_shopify_info(product, quantity, AM_ROOT))
+
+        elif handle.startswith("rev"):
+            raise ValueError(f"REV Robotics parts are not supported")
+
+        elif handle.startswith("ctre"):
+            if ctre_catalog is None:
+                ctre_catalog = get_shopify_catalog(CTRE_URL, CTRE_ROOT)
+
+            resolved_handle = get_handle_for_sku(ctre_catalog, handle)
+            if resolved_handle is None:
+                raise ValueError(f"SKU {handle} is not a valid part for CTR Electronics")
+
+            product = get_shopify_product(resolved_handle, CTRE_ROOT)
+            results.append(filter_shopify_info(product, quantity, CTRE_ROOT))
+
+        else:
+            raise ValueError(f"SKU {handle} is not a valid part for any vendor")
 
     if not results:
         raise ValueError("The CSV contains no product rows.")
