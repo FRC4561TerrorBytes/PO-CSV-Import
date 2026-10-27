@@ -15,6 +15,11 @@ wcp-0100,1
 * Andymark
 * CTR Electronics
 * REV Robotics
+* ThriftyBot
+
+### Next up
+* SDS - doesn't do SKUs lol
+* Swyft - JSON endpoint not exposed on site?
 
 ## Using the App
 1. Download the vendor CSV from FRCBom

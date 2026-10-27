@@ -82,7 +82,7 @@ def get_shopify_product(handle, url):
     return response.json()
 
 
-def get_handle_for_sku(catalog, sku):
+def get_shopify_handle_for_sku(catalog, sku):
     if not catalog or not sku:
         return None
 

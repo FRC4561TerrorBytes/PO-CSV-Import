@@ -19,7 +19,8 @@ WCP_URL = "https://wcproducts.com"
 AM_URL = "https://Andymark.com"
 CTRE_URL = "https://www.store.ctr-electronics.com"
 REV_URL = "https://www.revrobotics.com"
-
+SDS_URL = "https://www.swervedrivespecialties.com"
+TTB_URL = "https://www.thethriftybot.com"
 
 #Fetch and format products from a two-column CSV. Currenty works for WCP only
 def products_from_csv(csv_text):
@@ -33,6 +34,7 @@ def products_from_csv(csv_text):
 
     results = []
     ctre_catalog = None
+    ttb_catalog = None
     rev_storefront_token = None
     for row_number, row in enumerate(rows, start=1):
         if not row or not any(cell.strip() for cell in row):
@@ -60,7 +62,7 @@ def products_from_csv(csv_text):
             if am_catalog is None:
                 am_catalog = get_shopify_catalog(AM_URL, AM_URL)
 
-            resolved_handle = get_handle_for_sku(am_catalog, handle)
+            resolved_handle = get_shopify_handle_for_sku(am_catalog, handle)
             if resolved_handle is None:
                 raise ValueError(f"SKU {handle} is not a valid part for Andymark")
 
@@ -77,11 +79,25 @@ def products_from_csv(csv_text):
 
             results.append(filter_rev_info(product, quantity))
 
+        elif handle.startswith("ttb"):
+            if ttb_catalog is None:
+                ttb_catalog = get_shopify_catalog(
+                    f"{TTB_URL.rstrip('/')}/products",
+                    TTB_URL,
+                )
+
+            resolved_handle = get_shopify_handle_for_sku(ttb_catalog, handle)
+            if resolved_handle is None:
+                raise ValueError(f"SKU {handle} is not a valid part for ThriftyBot")
+
+            product = get_shopify_product(resolved_handle, TTB_URL)
+            results.append(filter_shopify_info(product, quantity, TTB_URL))
+            
         elif match_ctre("ctre"):
             if ctre_catalog is None:
                 ctre_catalog = get_shopify_catalog(CTRE_URL, CTRE_ROOT)
 
-            resolved_handle = get_handle_for_sku(ctre_catalog, handle)
+            resolved_handle = get_shopify_handle_for_sku(ctre_catalog, handle)
             if resolved_handle is None:
                 raise ValueError(f"SKU {handle} is not a valid part for CTR Electronics")
 
