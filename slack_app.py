@@ -19,7 +19,6 @@ WCP_URL = "https://wcproducts.com"
 AM_URL = "https://Andymark.com"
 CTRE_URL = "https://www.store.ctr-electronics.com"
 REV_URL = "https://www.revrobotics.com"
-ctreRegex = re.compile(r"^\d{2}-\d{6}$")
 
 
 #Fetch and format products from a two-column CSV. Currenty works for WCP only
@@ -198,7 +197,7 @@ def match_ctre(sku):
     if sku.startsWith("LIC"):
         return True
 
-    return ctreRegex.match(sku)
+    return re.fullmatch(r"^\d{2}-\d{6}$", sku)
 
 
 #Support Slack's file input state shape while keeping validation explicit.
