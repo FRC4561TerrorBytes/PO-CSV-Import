@@ -14,9 +14,7 @@ wcp-0100,1
 * West Coast Products (WCP)
 * Andymark
 * CTR Electronics
-
-Unsupported as of now:
-* REV
+* REV Robotics
 
 ## Using the App
 1. Download the vendor CSV from FRCBom

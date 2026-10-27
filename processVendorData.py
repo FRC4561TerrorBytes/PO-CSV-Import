@@ -96,6 +96,113 @@ def get_handle_for_sku(catalog, sku):
 
     return None
 
+# Get a graphql token, somehow this doesn't need an API token before??
+def get_rev_storefront_token():
+    response = requests.get(
+        REV_URL,
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=20,
+    )
+    response.raise_for_status()
+
+    token_match = re.search(r'graphQLToken\\":\\"([^\\"]+)', response.text)
+    if not token_match:
+        raise ValueError("Could not find the REV Robotics storefront API token.")
+    return token_match.group(1)
+
+# Get and Parse the response from the GraphQL query
+def get_rev_product(sku, storefront_token):
+    query = """
+        query ProductBySku($sku: String!) {
+            site {
+                product(sku: $sku) {
+                    name
+                    sku
+                    path
+                    variants(first: 50) {
+                        edges {
+                            node {
+                                sku
+                                prices {
+                                    price {
+                                        value
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    """
+    response = requests.post(
+        f"{REV_URL}/graphql",
+        headers={
+            "Authorization": f"Bearer {storefront_token}",
+            "Content-Type": "application/json",
+        },
+        json={"query": query, "variables": {"sku": sku.strip().upper()}},
+        timeout=20,
+    )
+    response.raise_for_status()
+
+    payload = response.json()
+    if payload.get("errors"):
+        messages = "; ".join(
+            error.get("message", "Unknown GraphQL error")
+            for error in payload["errors"]
+        )
+        raise ValueError(f"REV Robotics product lookup failed: {messages}")
+
+    return parse_rev_product_payload(payload, sku)
+
+# Append variants, normalize prices to cents, fail on a malformed product
+def parse_rev_product_payload(payload, sku):
+    product = (
+        payload.get("data", {})
+        .get("site", {})
+        .get("product")
+    )
+    if not product:
+        return None
+
+    variants = []
+    for edge in (product.get("variants") or {}).get("edges") or []:
+        variant = edge.get("node") or {}
+        variant_price = (
+            (variant.get("prices") or {})
+            .get("price", {})
+            .get("value")
+        )
+        variants.append({
+            "sku": (variant.get("sku") or "").strip(),
+            "title": (variant.get("name") or product.get("name") or "").strip(),
+            "price": normalize_price_to_cents(variant_price),
+        })
+
+    normalized_sku = sku.strip().upper()
+    selected_variant = next(
+        (variant for variant in variants if variant["sku"].upper() == normalized_sku),
+        variants[0] if variants else None,
+    )
+    product_price = product.get("price")
+    price = (
+        selected_variant["price"]
+        if selected_variant
+        else normalize_price_to_cents(product_price)
+    )
+    path = (product.get("path") or "").strip()
+    handle = path.strip("/") or normalized_sku.lower()
+    print(variants)
+    return {
+        "handle": handle,
+        "path": path,
+        "title": (product.get("name") or normalized_sku).strip(),
+        "sku": (product.get("sku") or normalized_sku).strip(),
+        "price": price,
+        "variants": variants,
+    }
+
 
 def get_andymark_product(handle): #Andymark is also shopify, so this might have the same workflow as WCP
     return -1
@@ -104,7 +211,7 @@ def get_andymark_product(handle): #Andymark is also shopify, so this might have 
 def get_ctre_product(handle):
     return -1
 
-
+# convert a cent or dollar price to cents as an int
 def normalize_price_to_cents(price):
     if price is None:
         return 0
@@ -156,4 +263,14 @@ def filter_shopify_info(product, quantity, store_url):
         "Num": quantity,
         "Link": f"{store_url.rstrip('/')}/products/{quote(handle, safe='')}" if handle else None,
         "Price": price,
+    }
+
+
+def filter_rev_info(product, quantity):
+    path = product.get("path") or f"/{quote(product.get('handle', ''), safe='')}/"
+    return {
+        "Title": product.get("title"),
+        "Num": quantity,
+        "Link": f"{REV_URL.rstrip('/')}/{path.lstrip('/')}",
+        "Price": cents_to_dollars(product.get("price")),
     }

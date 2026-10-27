@@ -33,6 +33,7 @@ def products_from_csv(csv_text):
 
     results = []
     ctre_catalog = None
+    rev_storefront_token = None
     for row_number, row in enumerate(rows, start=1):
         if not row or not any(cell.strip() for cell in row):
             continue
@@ -67,7 +68,14 @@ def products_from_csv(csv_text):
             results.append(filter_shopify_info(product, quantity, AM_ROOT))
 
         elif handle.startswith("rev"):
-            raise ValueError(f"REV Robotics parts are not supported")
+            if rev_storefront_token is None:
+                rev_storefront_token = get_rev_storefront_token()
+
+            product = get_rev_product(handle, rev_storefront_token)
+            if product is None:
+                raise ValueError(f"SKU {handle} is not a valid part for REV Robotics")
+
+            results.append(filter_rev_info(product, quantity))
 
         elif match_ctre("ctre"):
             if ctre_catalog is None:
