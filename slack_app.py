@@ -17,8 +17,10 @@ from processVendorData import *
 
 WCP_URL = "https://wcproducts.com"
 AM_URL = "https://Andymark.com"
-CTRE_URL = "https://www.ctre-phoenix.com"
+CTRE_URL = "https://www.store.ctr-electronics.com"
 REV_URL = "https://www.revrobotics.com"
+ctreRegex = re.compile(r"^\d{2}-\d{6}$")
+
 
 #Fetch and format products from a two-column CSV. Currenty works for WCP only
 def products_from_csv(csv_text):
@@ -68,7 +70,7 @@ def products_from_csv(csv_text):
         elif handle.startswith("rev"):
             raise ValueError(f"REV Robotics parts are not supported")
 
-        elif handle.startswith("ctre"):
+        elif match_ctre("ctre"):
             if ctre_catalog is None:
                 ctre_catalog = get_shopify_catalog(CTRE_URL, CTRE_ROOT)
 
@@ -188,6 +190,16 @@ def append_products_to_sheet(results):
         insert_data_option="INSERT_ROWS",
         table_range=f"{column_letter(first_column)}:{column_letter(last_column)}",
     )
+
+# Matches SKUs to CTRE pattern
+def match_ctre(sku):
+
+    #Phoenix pro license
+    if sku.startsWith("LIC"):
+        return True
+
+    return ctreRegex.match(sku)
+
 
 #Support Slack's file input state shape while keeping validation explicit.
 def extract_file_id(view_state):
